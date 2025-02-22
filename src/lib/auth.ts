@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
 
+/**
+ * User Authentication Module
+ * Handles user-specific authentication using Supabase Auth.
+ * Provides functions for user sign up, sign in, and sign out operations.
+ */
+
 export async function signUp(email: string, password: string) {
   const { data, error } = await supabase.auth.signUp({
     email,

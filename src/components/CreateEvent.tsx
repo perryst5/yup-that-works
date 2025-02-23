@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Plus, Trash } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
-import { addDays, format, eachHourOfInterval, set } from 'date-fns';
+import { addDays, format, eachHourOfInterval, set, parseISO } from 'date-fns';
 import { formatTime24to12, format24Hour } from '../lib/timeUtils';
 
 interface CreateEventProps {
@@ -28,7 +28,8 @@ function CreateEvent({ user }: CreateEventProps) {
 
   const addDate = () => {
     const lastDate = dates[dates.length - 1];
-    const nextDate = format(addDays(new Date(lastDate.date), 1), 'yyyy-MM-dd');
+    const parsedDate = parseISO(lastDate.date); // Properly parse the ISO date string
+    const nextDate = format(addDays(parsedDate, 1), 'yyyy-MM-dd');
     setDates([...dates, {
       date: nextDate,
       startTime: lastDate.startTime,

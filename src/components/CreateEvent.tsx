@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 import { addDays, format, eachHourOfInterval, set, parseISO } from 'date-fns';
 import { formatTime24to12, format24Hour } from '../lib/timeUtils';
+import { useTrimmedInput } from '../hooks/useTrimmedInput';
 
 interface CreateEventProps {
   user: any;
@@ -18,8 +19,8 @@ interface DateSlot {
 
 function CreateEvent({ user }: CreateEventProps) {
   const navigate = useNavigate();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const title = useTrimmedInput('');
+  const description = useTrimmedInput('');
   const [dates, setDates] = useState<DateSlot[]>([{
     date: format(new Date(), 'yyyy-MM-dd'),
     startTime: '09:00',
@@ -68,8 +69,8 @@ function CreateEvent({ user }: CreateEventProps) {
       .insert([
         {
           id: eventId,
-          title,
-          description,
+          title: title.trimmedValue,
+          description: description.trimmedValue,
           dates: timeSlots,
           creator_id: user?.id
         }
@@ -94,8 +95,9 @@ function CreateEvent({ user }: CreateEventProps) {
           <input
             type="text"
             id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={title.value}
+            onChange={title.handleChange}
+            onBlur={title.handleBlur}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             required
           />
@@ -107,8 +109,9 @@ function CreateEvent({ user }: CreateEventProps) {
           </label>
           <textarea
             id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={description.value}
+            onChange={description.handleChange}
+            onBlur={description.handleBlur}
             rows={3}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           />

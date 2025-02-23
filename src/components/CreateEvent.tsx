@@ -128,9 +128,9 @@ function CreateEvent({ user }: CreateEventProps) {
           </div>
 
           {dates.map((date, index) => (
-            <div key={index} className="flex items-center space-x-4 bg-gray-50 p-4 rounded-md">
+            <div key={index} className="flex items-start space-x-4 bg-gray-50 p-4 rounded-md">
               <div className="flex-1">
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700">
                       <Calendar className="h-4 w-4 inline mr-2" />
@@ -204,7 +204,7 @@ function CreateEvent({ user }: CreateEventProps) {
                 <button
                   type="button"
                   onClick={() => removeDate(index)}
-                  className="p-2 text-red-600 hover:text-red-800"
+                  className="p-2 text-red-600 hover:text-red-800 mt-8 md:mt-0"
                 >
                   <Trash className="h-5 w-5" />
                 </button>

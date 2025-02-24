@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { addDays, format, eachHourOfInterval, set, parseISO } from 'date-fns';
 import { formatTime24to12, format24Hour } from '../lib/timeUtils';
 import { useTrimmedInput } from '../hooks/useTrimmedInput';
+import { getCurrentUserId } from '../lib/auth';
 
 interface CreateEventProps {
   user: any;
@@ -22,7 +23,7 @@ function CreateEvent({ user }: CreateEventProps) {
   const title = useTrimmedInput('');
   const description = useTrimmedInput('');
   const [dates, setDates] = useState<DateSlot[]>([{
-    date: format(new Date(), 'yyyy-MM-dd'),
+    date: format(new Date(), 'yyyy-MM-dd'), // This will now use today's date
     startTime: '09:00',
     endTime: '17:00'
   }]);
@@ -46,23 +47,29 @@ function CreateEvent({ user }: CreateEventProps) {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
 
-    const start = set(new Date(date), { hours: startHour, minutes: startMinute });
-    const end = set(new Date(date), { hours: endHour, minutes: endMinute });
+    // Keep the date in local timezone
+    const baseDate = new Date(date + 'T00:00:00');
+    const start = set(baseDate, { hours: startHour, minutes: startMinute });
+    const end = set(baseDate, { hours: endHour, minutes: endMinute });
 
     return eachHourOfInterval({ start, end });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    const creatorId = await getCurrentUserId();
+
     const eventId = uuidv4();
-    const timeSlots = dates.flatMap(d => {
-      const slots = generateTimeSlots(d.date, d.startTime, d.endTime);
-      return slots.map(slot => ({
-        date: format(slot, 'yyyy-MM-dd'),
-        hour: format(slot, 'HH:00')
+    const slots = dates.flatMap(d => {
+      const times = generateTimeSlots(d.date, d.startTime, d.endTime);
+      return times.map(time => ({
+        date: format(time, 'yyyy-MM-dd'),
+        time: format(time, 'HH:00')
       }));
     });
+
+    const uniqueDates = [...new Set(slots.map(slot => slot.date))];
+    const uniqueTimes = [...new Set(slots.map(slot => slot.time))];
 
     const { error } = await supabase
       .from('events')
@@ -71,8 +78,9 @@ function CreateEvent({ user }: CreateEventProps) {
           id: eventId,
           title: title.trimmedValue,
           description: description.trimmedValue,
-          dates: timeSlots,
-          creator_id: user?.id
+          dates: uniqueDates,
+          times: uniqueTimes,
+          creator_id: creatorId
         }
       ]);
 

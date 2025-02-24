@@ -29,7 +29,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true
+  }
+});
+
+// Add helper to check if user is authenticated
+export const isAuthenticated = () => {
+  return !!supabase.auth.session()?.user;
+};
 
 // Helper function to check if tables exist
 export const initializeTables = async () => {

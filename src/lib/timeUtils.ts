@@ -53,3 +53,68 @@ export const formatDateForDisplay = (dateStr: string | undefined) => {
     return '';
   }
 };
+
+export const toUTC = (localDate: string, localTime: string): { date: string; time: string } => {
+  try {
+    // Validate inputs
+    if (!localDate || !localTime) {
+      throw new Error('Invalid date or time');
+    }
+
+    // Parse date components
+    const [year, month, day] = localDate.split('-').map(Number);
+    if (!year || !month || !day) {
+      throw new Error('Invalid date format');
+    }
+
+    // Parse time components
+    const [hour, minute] = localTime.split(':').map(Number);
+    if (isNaN(hour) || isNaN(minute)) {
+      throw new Error('Invalid time format');
+    }
+
+    // Create date in local timezone
+    const localDateTime = new Date();
+    localDateTime.setFullYear(year, month - 1, day);
+    localDateTime.setHours(hour, minute, 0, 0);
+
+    // Get UTC values
+    const utcYear = localDateTime.getUTCFullYear();
+    const utcMonth = (localDateTime.getUTCMonth() + 1).toString().padStart(2, '0');
+    const utcDay = localDateTime.getUTCDate().toString().padStart(2, '0');
+    const utcHour = localDateTime.getUTCHours().toString().padStart(2, '0');
+    const utcMinute = localDateTime.getUTCMinutes().toString().padStart(2, '0');
+
+    return {
+      date: `${utcYear}-${utcMonth}-${utcDay}`,
+      time: `${utcHour}:${utcMinute}`
+    };
+  } catch (error) {
+    console.error('Error in toUTC:', { localDate, localTime, error });
+    throw error;
+  }
+};
+
+export const fromUTC = (utcDate: string, utcTime: string): { date: string; time: string } => {
+  try {
+    // Validate input format
+    if (!utcDate.match(/^\d{4}-\d{2}-\d{2}$/) || !utcTime.match(/^\d{2}:\d{2}$/)) {
+      console.error('Invalid UTC format:', { utcDate, utcTime });
+      return { date: utcDate, time: utcTime }; // Return as-is if invalid
+    }
+
+    // Create a UTC date (add 'Z' to indicate UTC)
+    const dateTime = new Date(`${utcDate}T${utcTime}:00Z`);
+    if (isNaN(dateTime.getTime())) {
+      throw new Error('Invalid date/time');
+    }
+
+    return {
+      date: format(dateTime, 'yyyy-MM-dd'),
+      time: format(dateTime, 'HH:mm')
+    };
+  } catch (error) {
+    console.error('Error converting UTC time:', { utcDate, utcTime, error });
+    return { date: utcDate, time: utcTime }; // Return as-is if conversion fails
+  }
+};

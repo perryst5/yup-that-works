@@ -23,8 +23,7 @@ create table events (
     creator_id text not null default get_current_user_id(),
     title text not null,
     description text,
-    dates text[] not null,
-    times text[] not null
+    time_slots jsonb not null -- Changed from dates/times arrays to time_slots json
 );
 
 create table responses (
@@ -70,25 +69,3 @@ create policy "Anyone can view responses"
 grant usage on schema public to anon, authenticated;
 grant all on events to anon, authenticated;
 grant all on responses to anon, authenticated;
-
--- Add migration stored procedure
-create or replace function migrate_user_data(old_id text, new_id text)
-returns void
-language plpgsql
-security definer
-as $$
-begin
-  -- Update events
-  update events
-  set creator_id = new_id
-  where creator_id = old_id;
-
-  -- Update responses
-  update responses
-  set user_id = new_id
-  where user_id = old_id;
-end;
-$$;
-
--- Grant execute permission
-grant execute on function migrate_user_data(text, text) to authenticated;

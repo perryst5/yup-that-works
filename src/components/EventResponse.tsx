@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Check, X } from 'lucide-react';
-import { formatTimeForDisplay, formatDateForDisplay } from '../lib/timeUtils';
+import { formatTimeForDisplay, formatDateForDisplay, fromUTC, toUTC } from '../lib/timeUtils';
 import type { Event } from '../lib/supabase';
 import { getCurrentUserId } from '../lib/auth';
 
@@ -27,10 +27,22 @@ function EventResponse() {
         .single();
 
       if (!error && data) {
-        setEvent(data);
+        // Convert UTC time_slots to local time for display
+        const localTimeSlots = Object.entries(data.time_slots).reduce((acc, [utcDate, utcTimes]) => {
+          utcTimes.forEach(utcTime => {
+            const { date: localDate, time: localTime } = fromUTC(utcDate, utcTime);
+            if (!acc[localDate]) acc[localDate] = [];
+            acc[localDate].push(localTime);
+          });
+          return acc;
+        }, {} as Record<string, string[]>);
+
+        setEvent({ ...data, time_slots: localTimeSlots });
+        
+        // Initialize selections with local times
         const initialSelections: {[key: string]: boolean} = {};
-        data.dates.forEach((date: string) => {
-          data.times.forEach((time: string) => {
+        Object.entries(localTimeSlots).forEach(([date, times]) => {
+          times.forEach(time => {
             initialSelections[`${date}-${time}`] = false;
           });
         });
@@ -43,45 +55,43 @@ function EventResponse() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const userId = await getCurrentUserId();
-    console.log('Submitting response for user:', userId);
 
-    // Log selections for debugging
-    console.log('Raw selections:', selections);
-
-    // Extract date and time correctly from the timeSlot string
     const availability = Object.entries(selections)
       .filter(([_, selected]) => selected)
       .map(([timeSlot]) => {
-        // Use substring to properly split YYYY-MM-DD-HH:mm format
-        const date = timeSlot.substring(0, 10); // Gets YYYY-MM-DD
-        const time = timeSlot.substring(11);    // Gets HH:mm
-        console.log('Processing timeSlot:', { timeSlot, date, time });
-        return {
-          date,
-          time,
-          available: true
-        };
+        // Fix timeSlot splitting - it's in format "YYYY-MM-DD-HH:mm"
+        const lastHyphen = timeSlot.lastIndexOf('-');
+        const date = timeSlot.substring(0, lastHyphen);
+        const time = timeSlot.substring(lastHyphen + 1);
+        
+        console.log('Processing timeSlot:', { timeSlot, parsed: { date, time }});
+        
+        try {
+          const { date: utcDate, time: utcTime } = toUTC(date, time);
+          console.log('Converted to UTC:', { utcDate, utcTime });
+          
+          return {
+            date: utcDate,
+            time: utcTime,
+            available: true
+          };
+        } catch (error) {
+          console.error('Conversion error:', { date, time, error });
+          throw error;
+        }
       });
 
-    console.log('Final response data:', {
-      event_id: id,
-      user_id: userId,
-      name,
-      availability
-    });
+    console.log('Final availability:', availability);
 
     const { error } = await supabase
       .from('responses')
-      .insert([
-        {
-          event_id: id,
-          user_id: userId,
-          name,
-          availability
-        }
-      ]);
+      .insert([{
+        event_id: id,
+        user_id: userId,
+        name,
+        availability
+      }]);
 
     if (!error) {
       setSubmitted(true);
@@ -127,14 +137,13 @@ function EventResponse() {
 
         <div className="space-y-6">
           <h2 className="text-lg font-medium text-gray-900">Select Available Times</h2>
-          
-          {event && event.dates && event.dates.map(date => (
+          {Object.entries(event.time_slots).map(([date, times]) => (
             <div key={date} className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 {formatDateForDisplay(date)}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(event.times || []).sort().map((time) => {
+                {times.sort().map((time: string) => {
                   const timeSlot = `${date}-${time}`;
                   return (
                     <button

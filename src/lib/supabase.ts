@@ -6,8 +6,9 @@ export type Event = {
   creator_id: string;
   title: string;
   description?: string;
-  dates: string[];
-  times: string[];
+  time_slots: {
+    [date: string]: string[] // Maps dates to array of available times
+  };
 };
 
 export type Response = {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { formatTimeForDisplay, formatDateForDisplay } from '../lib/timeUtils';
+import { formatTimeForDisplay, formatDateForDisplay, fromUTC } from '../lib/timeUtils';
 import type { Event, Response } from '../lib/supabase';
 
 function EventResults() {
@@ -19,7 +19,22 @@ function EventResults() {
         .single();
 
       if (eventData) {
-        setEvent(eventData);
+        // Convert UTC time_slots to local time for display
+        const localTimeSlots = Object.entries(eventData.time_slots).reduce((acc, [utcDate, utcTimes]) => {
+          utcTimes.forEach(utcTime => {
+            const { date: localDate, time: localTime } = fromUTC(utcDate, utcTime);
+            if (!acc[localDate]) acc[localDate] = [];
+            if (!acc[localDate].includes(localTime)) {
+              acc[localDate].push(localTime);
+            }
+          });
+          return acc;
+        }, {} as Record<string, string[]>);
+
+        console.log('UTC time slots:', eventData.time_slots);
+        console.log('Local time slots:', localTimeSlots);
+
+        setEvent({ ...eventData, time_slots: localTimeSlots });
       }
 
       // Fetch responses with logging
@@ -43,29 +58,37 @@ function EventResults() {
 
   if (!event) return <div>Loading...</div>;
 
-  // Create availability grid
-  const availabilityGrid = event.dates.map(date => ({
+  // Create availability grid from time_slots structure
+  const availabilityGrid = Object.entries(event.time_slots).map(([date, times]) => ({
     date,
-    times: event.times.map(time => {
+    times: times.map(time => {
       const available = responses.filter(response => 
-        response.availability.some(slot => 
-          slot.date === date && 
-          slot.time === time && 
-          slot.available
-        )
+        response.availability?.some(slot => {
+          try {
+            if (!slot || !slot.date || !slot.time) return false;
+            const { date: localDate, time: localTime } = fromUTC(slot.date, slot.time);
+            const matches = localDate === date && localTime === time && slot.available;
+            return matches;
+          } catch (error) {
+            console.error('Error processing response:', { slot, error });
+            return false;
+          }
+        }) || false
       );
-      const percentage = responses.length > 0 
-        ? Math.round((available.length / responses.length) * 100) 
-        : 0;
 
       return {
         time,
         count: available.length,
-        percentage,
+        percentage: responses.length > 0 
+          ? Math.round((available.length / responses.length) * 100) 
+          : 0,
         respondents: available.map(r => r.name)
       };
     })
   }));
+
+  // Log the final grid for debugging
+  console.log('Availability grid:', availabilityGrid);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -80,29 +103,23 @@ function EventResults() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {formatDateForDisplay(date)}
             </h3>
-            <div className="space-y-2">
-              {times.map(({ time, count, percentage, respondents }) => (
-                <div key={`${date}-${time}`} className="relative">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-700">
-                      {formatTimeForDisplay(time)}
-                    </span>
-                    <span className="text-sm font-medium text-gray-700">
-                      {count} / {responses.length} ({percentage}%)
-                    </span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {times.map(({ time, count, respondents }) => (
+                <div
+                  key={`${date}-${time}`}
+                  className={`p-3 rounded-md ${
+                    count > 0 ? 'bg-green-100' : 'bg-white'
+                  }`}
+                >
+                  <div className="font-medium">{formatTimeForDisplay(time)}</div>
+                  <div className="text-sm text-gray-600">
+                    {count} {count === 1 ? 'person' : 'people'}
                   </div>
-                  <div className="overflow-hidden h-6 text-xs flex bg-gray-200 rounded">
-                    <div
-                      style={{ width: `${percentage}%` }}
-                      className="bg-green-500 transition-all duration-300 flex items-center justify-center text-white shadow-none whitespace-nowrap"
-                    >
-                      {respondents.length > 0 && (
-                        <span className="px-2 truncate">
-                          {respondents.join(', ')}
-                        </span>
-                      )}
+                  {count > 0 && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {respondents.join(', ')}
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

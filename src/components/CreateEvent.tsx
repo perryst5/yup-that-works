@@ -4,7 +4,7 @@ import { Calendar, Clock, Plus, Trash } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 import { addDays, format, eachHourOfInterval, set, parseISO } from 'date-fns';
-import { formatTime24to12, format24Hour } from '../lib/timeUtils';
+import { formatTime24to12, format24Hour, toUTC } from '../lib/timeUtils';  // Changed from dateUtils to timeUtils
 import { useTrimmedInput } from '../hooks/useTrimmedInput';
 import { getCurrentUserId } from '../lib/auth';
 
@@ -23,7 +23,7 @@ function CreateEvent({ user }: CreateEventProps) {
   const title = useTrimmedInput('');
   const description = useTrimmedInput('');
   const [dates, setDates] = useState<DateSlot[]>([{
-    date: format(new Date(), 'yyyy-MM-dd'), // This will now use today's date
+    date: format(new Date(), 'yyyy-MM-dd'),
     startTime: '09:00',
     endTime: '17:00'
   }]);
@@ -47,10 +47,8 @@ function CreateEvent({ user }: CreateEventProps) {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
 
-    // Keep the date in local timezone
-    const baseDate = new Date(date + 'T00:00:00');
-    const start = set(baseDate, { hours: startHour, minutes: startMinute });
-    const end = set(baseDate, { hours: endHour, minutes: endMinute });
+    const start = set(new Date(date), { hours: startHour, minutes: startMinute });
+    const end = set(new Date(date), { hours: endHour, minutes: endMinute });
 
     return eachHourOfInterval({ start, end });
   };
@@ -58,31 +56,39 @@ function CreateEvent({ user }: CreateEventProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const creatorId = await getCurrentUserId();
-
     const eventId = uuidv4();
-    const slots = dates.flatMap(d => {
-      const times = generateTimeSlots(d.date, d.startTime, d.endTime);
-      return times.map(time => ({
-        date: format(time, 'yyyy-MM-dd'),
-        time: format(time, 'HH:00')
-      }));
-    });
 
-    const uniqueDates = [...new Set(slots.map(slot => slot.date))];
-    const uniqueTimes = [...new Set(slots.map(slot => slot.time))];
+    // Transform dates and times into UTC time_slots
+    const time_slots = dates.reduce((acc, d) => {
+      const times = [];
+      for (let hour = parseInt(d.startTime); hour <= parseInt(d.endTime); hour++) {
+        const localTime = `${hour.toString().padStart(2, '0')}:00`;
+        console.log(`Converting local time: ${d.date} ${localTime}`);
+        const { date: utcDate, time: utcTime } = toUTC(d.date, localTime);
+        console.log(`Converted to UTC: ${utcDate} ${utcTime}`);
+        
+        if (!acc[utcDate]) acc[utcDate] = [];
+        acc[utcDate].push(utcTime);
+      }
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    console.log('Final time_slots:', time_slots);
+
+    // Sort times within each date
+    Object.keys(time_slots).forEach(date => {
+      time_slots[date].sort();
+    });
 
     const { error } = await supabase
       .from('events')
-      .insert([
-        {
-          id: eventId,
-          title: title.trimmedValue,
-          description: description.trimmedValue,
-          dates: uniqueDates,
-          times: uniqueTimes,
-          creator_id: creatorId
-        }
-      ]);
+      .insert([{
+        id: eventId,
+        title: title.trimmedValue,
+        description: description.trimmedValue,
+        time_slots,
+        creator_id: creatorId
+      }]);
 
     if (!error) {
       navigate(user ? '/dashboard' : `/event/${eventId}`);

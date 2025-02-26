@@ -1,4 +1,5 @@
 import { format, parse } from 'date-fns';
+import { Temporal } from '@js-temporal/polyfill';
 
 export function formatTimeSlot(hour: string): string {
   // Parse the 24-hour time and format to 12-hour
@@ -56,38 +57,28 @@ export const formatDateForDisplay = (dateStr: string | undefined) => {
 
 export const toUTC = (localDate: string, localTime: string): { date: string; time: string } => {
   try {
-    // Validate inputs
     if (!localDate || !localTime) {
       throw new Error('Invalid date or time');
     }
 
-    // Parse date components
+    // Parse local date and time
     const [year, month, day] = localDate.split('-').map(Number);
-    if (!year || !month || !day) {
-      throw new Error('Invalid date format');
-    }
-
-    // Parse time components
     const [hour, minute] = localTime.split(':').map(Number);
-    if (isNaN(hour) || isNaN(minute)) {
-      throw new Error('Invalid time format');
+    if (!year || !month || !day || isNaN(hour) || isNaN(minute)) {
+      throw new Error('Invalid format');
     }
 
-    // Create date in local timezone
-    const localDateTime = new Date();
-    localDateTime.setFullYear(year, month - 1, day);
-    localDateTime.setHours(hour, minute, 0, 0);
-
-    // Get UTC values
-    const utcYear = localDateTime.getUTCFullYear();
-    const utcMonth = (localDateTime.getUTCMonth() + 1).toString().padStart(2, '0');
-    const utcDay = localDateTime.getUTCDate().toString().padStart(2, '0');
-    const utcHour = localDateTime.getUTCHours().toString().padStart(2, '0');
-    const utcMinute = localDateTime.getUTCMinutes().toString().padStart(2, '0');
+    // Create local datetime and convert to UTC
+    const localZone = Temporal.Now.timeZoneId();
+    const localDateTime = Temporal.PlainDateTime.from({
+      year, month, day, hour, minute
+    });
+    const zonedDateTime = localDateTime.toZonedDateTime(localZone);
+    const utcInstant = zonedDateTime.toInstant();
 
     return {
-      date: `${utcYear}-${utcMonth}-${utcDay}`,
-      time: `${utcHour}:${utcMinute}`
+      date: utcInstant.toZonedDateTimeISO('UTC').toPlainDate().toString(),
+      time: utcInstant.toZonedDateTimeISO('UTC').toPlainTime().toString().slice(0, 5)
     };
   } catch (error) {
     console.error('Error in toUTC:', { localDate, localTime, error });
@@ -97,24 +88,22 @@ export const toUTC = (localDate: string, localTime: string): { date: string; tim
 
 export const fromUTC = (utcDate: string, utcTime: string): { date: string; time: string } => {
   try {
-    // Validate input format
     if (!utcDate.match(/^\d{4}-\d{2}-\d{2}$/) || !utcTime.match(/^\d{2}:\d{2}$/)) {
-      console.error('Invalid UTC format:', { utcDate, utcTime });
-      return { date: utcDate, time: utcTime }; // Return as-is if invalid
+      return { date: utcDate, time: utcTime };
     }
 
-    // Create a UTC date (add 'Z' to indicate UTC)
-    const dateTime = new Date(`${utcDate}T${utcTime}:00Z`);
-    if (isNaN(dateTime.getTime())) {
-      throw new Error('Invalid date/time');
-    }
+    // Create UTC datetime and convert to local
+    const utcDateTime = Temporal.ZonedDateTime.from(
+      `${utcDate}T${utcTime}:00Z[UTC]`
+    );
+    const localDateTime = utcDateTime.withTimeZone(Temporal.Now.timeZoneId());
 
     return {
-      date: format(dateTime, 'yyyy-MM-dd'),
-      time: format(dateTime, 'HH:mm')
+      date: localDateTime.toPlainDate().toString(),
+      time: localDateTime.toPlainTime().toString().slice(0, 5)
     };
   } catch (error) {
     console.error('Error converting UTC time:', { utcDate, utcTime, error });
-    return { date: utcDate, time: utcTime }; // Return as-is if conversion fails
+    return { date: utcDate, time: utcTime };
   }
 };

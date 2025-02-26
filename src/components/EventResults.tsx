@@ -87,9 +87,6 @@ function EventResults() {
     })
   }));
 
-  // Log the final grid for debugging
-  console.log('Availability grid:', availabilityGrid);
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h1>

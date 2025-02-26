@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Plus, Trash } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
-import { addDays, format, eachHourOfInterval, set, parseISO } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import { formatTime24to12, format24Hour, toUTC } from '../lib/timeUtils';  // Changed from dateUtils to timeUtils
 import { useTrimmedInput } from '../hooks/useTrimmedInput';
 import { getCurrentUserId } from '../lib/auth';
@@ -43,16 +43,6 @@ function CreateEvent({ user }: CreateEventProps) {
     setDates(dates.filter((_, i) => i !== index));
   };
 
-  const generateTimeSlots = (date: string, startTime: string, endTime: string) => {
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-
-    const start = set(new Date(date), { hours: startHour, minutes: startMinute });
-    const end = set(new Date(date), { hours: endHour, minutes: endMinute });
-
-    return eachHourOfInterval({ start, end });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const creatorId = await getCurrentUserId();
@@ -60,7 +50,6 @@ function CreateEvent({ user }: CreateEventProps) {
 
     // Transform dates and times into UTC time_slots
     const time_slots = dates.reduce((acc, d) => {
-      const times = [];
       for (let hour = parseInt(d.startTime); hour <= parseInt(d.endTime); hour++) {
         const localTime = `${hour.toString().padStart(2, '0')}:00`;
         console.log(`Converting local time: ${d.date} ${localTime}`);
@@ -72,8 +61,6 @@ function CreateEvent({ user }: CreateEventProps) {
       }
       return acc;
     }, {} as Record<string, string[]>);
-
-    console.log('Final time_slots:', time_slots);
 
     // Sort times within each date
     Object.keys(time_slots).forEach(date => {

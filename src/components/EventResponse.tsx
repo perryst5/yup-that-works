@@ -6,11 +6,6 @@ import { formatTimeForDisplay, formatDateForDisplay, fromUTC, toUTC } from '../l
 import type { Event } from '../lib/supabase';
 import { getCurrentUserId } from '../lib/auth';
 
-interface TimeSlotData {
-  date: string;
-  hour: string;
-}
-
 function EventResponse() {
   const { id } = useParams();
   const [event, setEvent] = useState<Event | null>(null);
@@ -28,7 +23,7 @@ function EventResponse() {
 
       if (!error && data) {
         // Convert UTC time_slots to local time for display
-        const localTimeSlots = Object.entries(data.time_slots).reduce((acc, [utcDate, utcTimes]) => {
+        const localTimeSlots = Object.entries(data.time_slots).reduce((acc, [utcDate, utcTimes]: [string, string[]]) => {
           utcTimes.forEach(utcTime => {
             const { date: localDate, time: localTime } = fromUTC(utcDate, utcTime);
             if (!acc[localDate]) acc[localDate] = [];
@@ -60,16 +55,12 @@ function EventResponse() {
     const availability = Object.entries(selections)
       .filter(([_, selected]) => selected)
       .map(([timeSlot]) => {
-        // Fix timeSlot splitting - it's in format "YYYY-MM-DD-HH:mm"
         const lastHyphen = timeSlot.lastIndexOf('-');
         const date = timeSlot.substring(0, lastHyphen);
         const time = timeSlot.substring(lastHyphen + 1);
         
-        console.log('Processing timeSlot:', { timeSlot, parsed: { date, time }});
-        
         try {
           const { date: utcDate, time: utcTime } = toUTC(date, time);
-          console.log('Converted to UTC:', { utcDate, utcTime });
           
           return {
             date: utcDate,
@@ -81,8 +72,6 @@ function EventResponse() {
           throw error;
         }
       });
-
-    console.log('Final availability:', availability);
 
     const { error } = await supabase
       .from('responses')

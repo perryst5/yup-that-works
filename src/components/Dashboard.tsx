@@ -50,17 +50,30 @@ function Dashboard() {
       return "No dates set";
     }
 
-    const dates = Object.keys(timeSlots).sort();
-    const firstDate = dates[0];
-    const lastDate = dates[dates.length - 1];
+    try {
+      const dates = Object.keys(timeSlots).sort((a, b) => {
+        // Sort dates chronologically instead of lexicographically
+        return new Date(a).getTime() - new Date(b).getTime();
+      });
+      
+      if (dates.length === 0) {
+        return "No dates set";
+      }
+      
+      const firstDate = dates[0];
+      const lastDate = dates[dates.length - 1];
 
-    // If it's just one date, return that date
-    if (firstDate === lastDate) {
-      return formatDateForDisplay(firstDate);
+      // If it's just one date, return that date
+      if (firstDate === lastDate) {
+        return formatDateForDisplay(firstDate);
+      }
+
+      // Return date range
+      return `${formatDateForDisplay(firstDate)} - ${formatDateForDisplay(lastDate)}`;
+    } catch (error) {
+      console.error("Error formatting date range:", error);
+      return "Date formatting error";
     }
-
-    // Return date range
-    return `${formatDateForDisplay(firstDate)} - ${formatDateForDisplay(lastDate)}`;
   };
 
   if (loading) {

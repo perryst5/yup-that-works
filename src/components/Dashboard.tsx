@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Calendar, Users, ArrowRight } from 'lucide-react';
+import { formatDateForDisplay } from '../lib/timeUtils';
 
 function Dashboard() {
   const [events, setEvents] = useState<any[]>([]);
@@ -10,26 +11,57 @@ function Dashboard() {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-      const { data } = await supabase
-        .from('events')
-        .select(`
-          *,
-          responses:responses(*)
-        `)
-        .eq('creator_id', user.id)
-        .order('created_at', { ascending: false });
+        console.log('Fetching events for user:', user.id);
+        const { data, error } = await supabase
+          .from('events')
+          .select(`
+            *,
+            responses:responses(*)
+          `)
+          .eq('creator_id', user.id)
+          .order('created_at', { ascending: false });
 
-      if (data) {
-        setEvents(data);
+        if (error) {
+          console.error('Error fetching events:', error);
+          return;
+        }
+
+        if (data) {
+          console.log(`Found ${data.length} events for user ${user.id}:`, data);
+          setEvents(data);
+        }
+      } catch (err) {
+        console.error('Dashboard error:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchEvents();
   }, []);
+
+  // Helper function to get formatted date range from time_slots
+  const getDateRange = (timeSlots: Record<string, string[]> | undefined) => {
+    if (!timeSlots || Object.keys(timeSlots).length === 0) {
+      return "No dates set";
+    }
+
+    const dates = Object.keys(timeSlots).sort();
+    const firstDate = dates[0];
+    const lastDate = dates[dates.length - 1];
+
+    // If it's just one date, return that date
+    if (firstDate === lastDate) {
+      return formatDateForDisplay(firstDate);
+    }
+
+    // Return date range
+    return `${formatDateForDisplay(firstDate)} - ${formatDateForDisplay(lastDate)}`;
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -50,9 +82,7 @@ function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => {
           const responseCount = event.responses?.length || 0;
-          const firstDate = event.dates[0]?.date;
-          const lastDate = event.dates[event.dates.length - 1]?.date;
-
+          
           return (
             <div key={event.id} className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-2">{event.title}</h3>
@@ -64,10 +94,7 @@ function Dashboard() {
               <div className="space-y-2 mb-4">
                 <div className="flex items-center text-sm text-gray-500">
                   <Calendar className="h-4 w-4 mr-2" />
-                  <span>
-                    {format(parseISO(firstDate), 'MMM d')}
-                    {firstDate !== lastDate && ` - ${format(parseISO(lastDate), 'MMM d')}`}
-                  </span>
+                  <span>{getDateRange(event.time_slots)}</span>
                 </div>
 
                 <div className="flex items-center text-sm text-gray-500">
@@ -106,4 +133,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard
+export default Dashboard;

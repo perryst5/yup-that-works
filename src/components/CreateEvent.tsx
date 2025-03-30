@@ -45,42 +45,50 @@ function CreateEvent({ user }: CreateEventProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const creatorId = await getCurrentUserId();
-    const eventId = uuidv4();
+    
+    try {
+      // Get the current user ID (authenticated or anonymous)
+      const creatorId = await getCurrentUserId();
+      console.log('Creating event with creator ID:', creatorId);
+      
+      const eventId = uuidv4();
 
-    // Transform dates and times into UTC time_slots
-    const time_slots = dates.reduce((acc, d) => {
-      for (let hour = parseInt(d.startTime); hour <= parseInt(d.endTime); hour++) {
-        const localTime = `${hour.toString().padStart(2, '0')}:00`;
-        console.log(`Converting local time: ${d.date} ${localTime}`);
-        const { date: utcDate, time: utcTime } = toUTC(d.date, localTime);
-        console.log(`Converted to UTC: ${utcDate} ${utcTime}`);
-        
-        if (!acc[utcDate]) acc[utcDate] = [];
-        acc[utcDate].push(utcTime);
+      // Transform dates and times into UTC time_slots
+      const time_slots = dates.reduce((acc, d) => {
+        for (let hour = parseInt(d.startTime); hour <= parseInt(d.endTime); hour++) {
+          const localTime = `${hour.toString().padStart(2, '0')}:00`;
+          console.log(`Converting local time: ${d.date} ${localTime}`);
+          const { date: utcDate, time: utcTime } = toUTC(d.date, localTime);
+          console.log(`Converted to UTC: ${utcDate} ${utcTime}`);
+          
+          if (!acc[utcDate]) acc[utcDate] = [];
+          acc[utcDate].push(utcTime);
+        }
+        return acc;
+      }, {} as Record<string, string[]>);
+
+      // Sort times within each date
+      Object.keys(time_slots).forEach(date => {
+        time_slots[date].sort();
+      });
+
+      const { error } = await supabase
+        .from('events')
+        .insert([{
+          id: eventId,
+          title: title.trimmedValue,
+          description: description.trimmedValue,
+          time_slots,
+          creator_id: creatorId
+        }]);
+
+      if (!error) {
+        navigate(user ? '/dashboard' : `/event/${eventId}`);
+      } else {
+        console.error('Error creating event:', error.message);
       }
-      return acc;
-    }, {} as Record<string, string[]>);
-
-    // Sort times within each date
-    Object.keys(time_slots).forEach(date => {
-      time_slots[date].sort();
-    });
-
-    const { error } = await supabase
-      .from('events')
-      .insert([{
-        id: eventId,
-        title: title.trimmedValue,
-        description: description.trimmedValue,
-        time_slots,
-        creator_id: creatorId
-      }]);
-
-    if (!error) {
-      navigate(user ? '/dashboard' : `/event/${eventId}`);
-    } else {
-      console.error('Error creating event:', error.message);
+    } catch (err) {
+      console.error('Error in event creation:', err);
     }
   };
 

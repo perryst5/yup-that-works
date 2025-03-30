@@ -9,6 +9,7 @@ import AuthModal from './components/AuthModal';
 import { supabase } from './lib/supabase';
 import { signOut } from './lib/auth';
 import { isAuthenticated, checkSplashPassword } from './auth';
+import ManualMigration from './components/ManualMigration';
 
 function SplashScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
   return (
@@ -122,6 +123,7 @@ function App() {
             <Route path="/event/:id" element={<EventResponse />} />
             <Route path="/results/:id" element={<EventResults />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/admin/migrate" element={<ManualMigration />} />
           </Routes>
         </main>
 

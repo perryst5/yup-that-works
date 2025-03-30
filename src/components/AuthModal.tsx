@@ -13,20 +13,32 @@ function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     setError('');
 
-    const { error } = await (isSignUp ? signUp(email, password) : signIn(email, password));
+    try {
+      const { error } = await (isSignUp ? signUp(email, password) : signIn(email, password));
 
-    if (error) {
-      setError(error.message);
-    } else {
-      onSuccess();
-      onClose();
+      if (error) {
+        setError(error.message);
+      } else {
+        // Add a slight delay to ensure migration completes before redirecting
+        setTimeout(() => {
+          console.log('Authentication successful, anonymous ID will be migrated if present');
+          onSuccess();
+          onClose();
+        }, 500);
+      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -56,6 +68,7 @@ function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -70,6 +83,7 @@ function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -79,15 +93,17 @@ function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
 
           <button
             type="submit"
-            className="w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            disabled={isLoading}
+            className="w-full inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
-            {isSignUp ? 'Sign Up' : 'Sign In'}
+            {isLoading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Sign In')}
           </button>
 
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full text-sm text-indigo-600 hover:text-indigo-500"
+            disabled={isLoading}
+            className="w-full text-sm text-indigo-600 hover:text-indigo-500 disabled:opacity-50 disabled:hover:text-indigo-600"
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
@@ -97,4 +113,4 @@ function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   );
 }
 
-export default AuthModal
+export default AuthModal;

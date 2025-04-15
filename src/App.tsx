@@ -8,46 +8,11 @@ import Dashboard from './components/Dashboard';
 import AuthModal from './components/AuthModal';
 import { supabase } from './lib/supabase';
 import { signOut } from './lib/auth';
-import { isAuthenticated, checkSplashPassword } from './auth';
 import ManualMigration from './components/ManualMigration';
-
-function SplashScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-900">Yup, That Works.</h1>
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          const password = (e.target as any).password.value;
-          if (await checkSplashPassword(password)) {
-            onAuthenticated();
-          }
-        }}
-        className="space-y-4"
-        >
-          <input 
-            type="password" 
-            name="password" 
-            placeholder="Enter password" 
-            required 
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-          />
-          <button 
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-200"
-          >
-            Enter
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 function App() {
   const [user, setUser] = useState<any>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isAuthed, setIsAuthed] = useState(isAuthenticated());
 
   useEffect(() => {
     // Get initial user
@@ -69,10 +34,6 @@ function App() {
     await signOut();
     setUser(null);
   };
-
-  if (!isAuthed) {
-    return <SplashScreen onAuthenticated={() => setIsAuthed(true)} />;
-  }
 
   return (
     <Router>

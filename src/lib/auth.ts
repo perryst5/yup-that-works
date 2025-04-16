@@ -141,3 +141,35 @@ export function isAuthenticated() {
   const session = supabase.auth.getSession();
   return session !== null;
 }
+
+/**
+ * Request a password reset email for the given email address
+ */
+export async function resetPassword(email: string) {
+  try {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password',
+    });
+    
+    return { data, error };
+  } catch (err) {
+    console.error('Error requesting password reset:', err);
+    return { data: null, error: err };
+  }
+}
+
+/**
+ * Update user's password with a new one (used after reset)
+ */
+export async function updatePassword(newPassword: string) {
+  try {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    return { data, error };
+  } catch (err) {
+    console.error('Error updating password:', err);
+    return { data: null, error: err };
+  }
+}

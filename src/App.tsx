@@ -9,6 +9,7 @@ import AuthModal from './components/AuthModal';
 import { supabase } from './lib/supabase';
 import { signOut } from './lib/auth';
 import ManualMigration from './components/ManualMigration';
+import ResetPassword from './components/ResetPassword';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -85,6 +86,7 @@ function App() {
             <Route path="/results/:id" element={<EventResults />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/migrate" element={<ManualMigration />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Routes>
         </main>
 

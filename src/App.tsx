@@ -10,6 +10,8 @@ import { supabase } from './lib/supabase';
 import { signOut } from './lib/auth';
 import ManualMigration from './components/ManualMigration';
 import ResetPassword from './components/ResetPassword';
+import Home from './components/Home';
+import PrivacyPolicy from './components/PrivacyPolicy';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -38,7 +40,7 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
         <nav className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16 items-center">
@@ -79,16 +81,26 @@ function App() {
           </div>
         </nav>
 
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <main className="flex-grow w-full py-6 sm:px-6 lg:px-8">
           <Routes>
-            <Route path="/" element={<CreateEvent user={user} />} />
+            <Route path="/" element={<Home onOpenAuthModal={() => setIsAuthModalOpen(true)} />} />
             <Route path="/event/:id" element={<EventResponse />} />
             <Route path="/results/:id" element={<EventResults />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/migrate" element={<ManualMigration />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/create-event" element={<CreateEvent user={user} />} />
           </Routes>
         </main>
+
+        <footer className="bg-gray-100 py-4 mt-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-right">
+            <Link to="/privacy-policy" className="text-sm text-blue-500 hover:underline">
+              Privacy Policy
+            </Link>
+          </div>
+        </footer>
 
         <AuthModal
           isOpen={isAuthModalOpen}

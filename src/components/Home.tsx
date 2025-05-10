@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getUserState } from '../lib/auth';
 
 interface HomeProps {
@@ -47,12 +47,12 @@ const Home: React.FC<HomeProps> = ({ onOpenAuthModal }) => {
       <p className="text-lg text-blue-600 font-medium mt-6 mb-4">
         Want to get started right away?
       </p>
-      <a
-        href="/create-event"
+      <Link
+        to="/create-event"
         className="inline-block px-4 py-2 bg-blue-500 text-white font-semibold rounded-md shadow-md hover:bg-blue-600"
       >
         Create an Event
-      </a>
+      </Link>
     </div>
   );
 };

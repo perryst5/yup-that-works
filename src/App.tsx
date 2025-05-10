@@ -81,7 +81,7 @@ function App() {
           </div>
         </nav>
 
-        <main className="flex-grow w-full py-6 sm:px-6 lg:px-8">
+        <main className="flex-grow max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <Routes>
             <Route path="/" element={<Home onOpenAuthModal={() => setIsAuthModalOpen(true)} />} />
             <Route path="/event/:id" element={<EventResponse />} />

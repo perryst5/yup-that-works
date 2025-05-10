@@ -94,7 +94,7 @@ function Dashboard() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">My Events</h1>
         <Link
-          to="/"
+          to="/create-event"
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
         >
           Create New Event

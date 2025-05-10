@@ -5,10 +5,13 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    hmr: true, // Ensure hot module replacement is enabled
+    hmr: {
+      protocol: 'ws', // Ensure WebSocket is used for HMR
+      host: 'localhost', // Explicitly set the host
+    },
     watch: {
-      usePolling: true // This helps with some file system watchers
-    }
+      usePolling: true, // Helps with file system watchers in some environments
+    },
   },
   optimizeDeps: {
     include: ['date-fns', '@js-temporal/polyfill'], // Ensure date libraries are pre-bundled
